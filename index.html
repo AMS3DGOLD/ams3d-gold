@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AMS3D Gold - MT5</title>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -31,17 +31,20 @@
             font-weight: bold;
         }
 
-        .login {
+        button, .btn {
             background: #f5c542;
             color: #111;
             padding: 12px 22px;
+            border: none;
             border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
             text-decoration: none;
         }
 
         .hero {
             text-align: center;
-            padding: 100px 20px;
+            padding: 80px 20px;
         }
 
         h1 {
@@ -49,21 +52,7 @@
             color: #f5c542;
         }
 
-        .hero p {
-            color: #b9c0d0;
-            font-size: 18px;
-        }
-
-        .btn {
-            display: inline-block;
-            margin-top: 25px;
-            padding: 15px 35px;
-            background: #f5c542;
-            color: #111;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: bold;
-        }
+        .hero p { color: #b9c0d0; font-size: 18px; }
 
         .features {
             display: flex;
@@ -82,8 +71,53 @@
             border: 1px solid #2b3348;
         }
 
-        .card h3 {
+        .card h3 { color: #f5c542; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #000b;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-box {
+            background: #151b2a;
+            padding: 30px;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        input {
+            width: 100%;
+            padding: 13px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border: 1px solid #39435b;
+            background: #0b0f19;
+            color: white;
+        }
+
+        .modal-box button {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .close {
+            float: left;
+            cursor: pointer;
             color: #f5c542;
+        }
+
+        #dashboard { display: none; padding: 50px 8%; }
+
+        .profit {
+            font-size: 35px;
+            color: #f5c542;
+            margin: 20px 0;
         }
 
         footer {
@@ -98,25 +132,17 @@
 
 <header>
     <div class="logo">AMS3D GOLD</div>
-    <a class="login" href="#">تسجيل الدخول</a>
+    <button id="loginBtn" onclick="openModal('login')">تسجيل الدخول</button>
 </header>
 
-<section class="hero">
+<section class="hero" id="home">
     <h1>AMS3D Gold</h1>
-
-    <p>
-        منصة مراقبة أرباح حسابات MT5
-    </p>
-
-    <p>
-        شاهد الأرباح بسهولة، مع حماية بيانات الحسابات.
-    </p>
-
-    <a class="btn" href="#">إنشاء حساب جديد</a>
+    <p>منصة مراقبة أرباح حسابات MT5</p>
+    <p>شاهد الأرباح بسهولة، مع حماية بيانات الحسابات.</p>
+    <button onclick="openModal('register')">إنشاء حساب جديد</button>
 </section>
 
-<section class="features">
-
+<section class="features" id="features">
     <div class="card">
         <h3>أرباح MT5</h3>
         <p>عرض الأرباح اليومية والشهرية والإجمالية.</p>
@@ -124,19 +150,174 @@
 
     <div class="card">
         <h3>حماية البيانات</h3>
-        <p>إخفاء كلمات المرور والرصيد وبيانات الدخول.</p>
+        <p>إخفاء كلمات المرور وبيانات الدخول.</p>
     </div>
 
     <div class="card">
         <h3>لوحة الأدمن</h3>
         <p>إدارة المستخدمين والحسابات والأرباح.</p>
     </div>
-
 </section>
 
-<footer>
-    © 2026 AMS3D Gold
-</footer>
+<section id="dashboard">
+    <h2>لوحة الأرباح</h2>
+    <p id="welcome"></p>
+    <div class="profit" id="totalProfit">$0.00</div>
+    <p>إجمالي الأرباح</p>
+    <button onclick="logout()">تسجيل الخروج</button>
+</section>
+
+<div class="modal" id="authModal">
+    <div class="modal-box">
+        <span class="close" onclick="closeModal()">✕</span>
+
+        <h2 id="modalTitle">تسجيل الدخول</h2>
+
+        <input id="email" type="email" placeholder="البريد الإلكتروني">
+        <input id="password" type="password" placeholder="كلمة المرور">
+
+        <button id="authButton" onclick="handleAuth()">دخول</button>
+
+        <p id="switchText">
+            ليس لديك حساب؟
+            <a href="#" onclick="switchMode()">إنشاء حساب</a>
+        </p>
+
+        <p id="message"></p>
+    </div>
+</div>
+
+<footer>© 2026 AMS3D Gold</footer>
+
+<script>
+const SUPABASE_URL = "https://mfvhjllnvhgtndrcsxln.supabase.co";
+
+// ضع Publishable key الخاص بمشروعك هنا
+const SUPABASE_KEY = "ضع_المفتاح_هنا";
+
+const supabaseClient = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+
+let mode = "login";
+
+function openModal(selectedMode) {
+    mode = selectedMode;
+    document.getElementById("authModal").style.display = "flex";
+    updateModal();
+}
+
+function closeModal() {
+    document.getElementById("authModal").style.display = "none";
+}
+
+function switchMode() {
+    mode = mode === "login" ? "register" : "login";
+    updateModal();
+}
+
+function updateModal() {
+    document.getElementById("modalTitle").textContent =
+        mode === "login" ? "تسجيل الدخول" : "إنشاء حساب جديد";
+
+    document.getElementById("authButton").textContent =
+        mode === "login" ? "دخول" : "إنشاء الحساب";
+
+    document.getElementById("switchText").innerHTML =
+        mode === "login"
+        ? 'ليس لديك حساب؟ <a href="#" onclick="switchMode()">إنشاء حساب</a>'
+        : 'لديك حساب؟ <a href="#" onclick="switchMode()">تسجيل الدخول</a>';
+
+    document.getElementById("message").textContent = "";
+}
+
+async function handleAuth() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const message = document.getElementById("message");
+
+    if (!email || !password) {
+        message.textContent = "أدخل البريد الإلكتروني وكلمة المرور.";
+        return;
+    }
+
+    message.textContent = "جاري المعالجة...";
+
+    let result;
+
+    if (mode === "register") {
+        result = await supabaseClient.auth.signUp({
+            email,
+            password
+        });
+    } else {
+        result = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+        });
+    }
+
+    if (result.error) {
+        message.textContent = result.error.message;
+        return;
+    }
+
+    if (mode === "register") {
+        message.textContent =
+            "تم إنشاء الحساب. تحقق من بريدك الإلكتروني إذا طلب منك ذلك.";
+    } else {
+        closeModal();
+        showDashboard(result.data.user);
+    }
+}
+
+function showDashboard(user) {
+    document.getElementById("home").style.display = "none";
+    document.getElementById("features").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+
+    document.getElementById("welcome").textContent =
+        "مرحبًا بك، " + user.email;
+
+    loadProfits(user.id);
+}
+
+async function loadProfits(userId) {
+    const { data, error } = await supabaseClient
+        .from("mt5_profits")
+        .select("profit, account_id, mt5_accounts!inner(user_id)")
+        .eq("mt5_accounts.user_id", userId);
+
+    if (error) {
+        console.error(error);
+        return;
+    }
+
+    const total = (data || []).reduce(
+        (sum, row) => sum + Number(row.profit || 0),
+        0
+    );
+
+    document.getElementById("totalProfit").textContent =
+        "$" + total.toFixed(2);
+}
+
+async function logout() {
+    await supabaseClient.auth.signOut();
+    location.reload();
+}
+
+async function checkSession() {
+    const { data } = await supabaseClient.auth.getSession();
+
+    if (data.session) {
+        showDashboard(data.session.user);
+    }
+}
+
+checkSession();
+</script>
 
 </body>
 </html>
